@@ -46,9 +46,6 @@ class Users(Base):
     user_id = Column(Integer, primary_key= True)
     user_name = Column(String)
     password= Column(String)
-
-    # New column for RBAC
-    role = Column(String, default="staff")
     
 Base.metadata.create_all(engine)
 
