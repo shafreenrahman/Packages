@@ -1,122 +1,112 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
+import Login from "./components/login";
+import RegisterForm from "./components/registerform";
+import PackageSearch from "./components/packagesearch";
+import PackageDetails from "./components/packagedetails";
+
+const API_URL = "http://127.0.0.1:8001";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [token, setToken] = useState("");
+  const [message, setMessage] = useState("");
+  const [pkg, setPkg] = useState(null);
+
+  // errors come as a plain string, but the validation (422) ones come as a list
+  function showError(data) {
+    if (data.detail === "Invalid or expired token") {
+      setToken("");
+    }
+    if (typeof data.detail === "string") {
+      setMessage(data.detail);
+    } else {
+      setMessage(data.detail[0].loc[1] + ": " + data.detail[0].msg);
+    }
+  }
+
+  // login gives back the access token, every other request sends it in the "token" header
+  function login(username, password) {
+    // runs post method from /login endpoint, the username and password go in the body
+    fetch(API_URL + "/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username, password: password }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.detail) {
+          showError(data);
+        } else {
+          setMessage("");
+          setToken(data.access_token);
+        }
+      });
+  }
+
+  function logout() {
+    setToken("");
+    setPkg(null);
+    setMessage("");
+  }
+
+  // E1 registers a new package, it is pending unless the status says otherwise
+  function addPackage(name, destination, weight, arrivalDate, status) {
+    // runs post method from /packages endpoint, the package details go in the body
+    fetch(API_URL + "/packages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token: token },
+      body: JSON.stringify({
+        name: name,
+        destination: destination,
+        weight: Number(weight),
+        arrival_date: arrivalDate,
+        status: status,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.detail) {
+          showError(data);
+        } else {
+          setMessage("Package registered with ID " + data.id);
+        }
+      });
+  }
+
+  // E2 gets one package, saved in pkg for the Package details section
+  function showPackage(id) {
+    // runs get method from /packages/{id} endpoint
+    fetch(API_URL + "/packages/" + id, { headers: { token: token } })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.detail) {
+          setPkg(null);
+          showError(data);
+        } else {
+          setMessage("");
+          setPkg(data);
+        }
+      });
+  }
+
+  if (token === "") {
+    return (
+      <>
+        <p><b>{message}</b></p>
+        <Login onLogin={login} />
+      </>
+    );
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <h1>Warehouse Dispatch</h1>
+      <button onClick={logout}>Log out</button>
+      <p><b>{message}</b></p>
+      <RegisterForm onAdd={addPackage} />
+      <PackageSearch onSearch={showPackage} />
+      <PackageDetails pkg={pkg} />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
